@@ -1,0 +1,130 @@
+---
+title: "memoirefinace"
+author: "Daniel SINEUS"
+date: "December 4, 2019"
+output: word_document
+---
+
+```{r setup, include=FALSE, echo=TRUE}
+memoire<-read.csv("mydataQuestionnaire-preparation.csv", header = TRUE)
+#Trier les données qu'on va utiliser assez souvent
+memoiredata<-subset(memoire, select = c(1:16,28:30, 32:39))
+memoiredata[1:4,]
+#Determiner les MPE et PME d'apres la classification propose dans le memoire
+memoiredata$MICROPME<-ifelse(memoiredata$Nbremployes=="<=5", "MICRO","PME")
+memoiredata$accesouinon<-ifelse(memoiredata$Demandecredit==0,"non","oui")
+memoiredata$acces1<-ifelse(memoiredata$acces=="oui",1,0)
+ls.str(memoiredata)
+memoiredata[1:4,]
+library(caret)
+train<-createDataPartition(memoiredata$acces, p=0.6, list = FALSE)
+training<-memoiredata[train,]
+training<-na.omit(training)
+testing=memoiredata[-train,]
+ls.str(memoiredata)#Pour savoir quelle variable qui est quantitative ou qualitative
+attach(memoiredata)
+library(gmodels)
+library(knitr)
+library(knitr)
+##rapport en acces et MPME
+kable(addmargins(round(prop.table(xtabs(~acces+MICROPME))*100,digits=2)), caption = "RELATION ENTRE MPME ET ACCESS AU CREDIT")
+kable(addmargins(round(prop.table(xtabs(~accesouinon+MICROPME))*100,digits=2)), caption = "ACCEPTE OU REFUS AVEC micropme")
+library(knitr)
+kable(addmargins(round(prop.table(xtabs(~acces+Education))*100,digits=2)))
+library(gmodels)
+#rapport entre acces et demande de credit aggree ou pas
+kable(addmargins(round(prop.table(xtabs(~acces+accesouinon))*100,digits=2)))
+#rapport entre acces et demande de credit
+kable(addmargins(round(prop.table(xtabs(~acces+Logement))*100, digits = 2)),caption = "relation entre acces et Logement")
+#rapport entre Acces et Age
+kable(addmargins(round(prop.table(xtabs(~acces+Age))*100, digits = 2)),caption="relation entre acces et age")
+kable(addmargins(round(prop.table(xtabs(~acces+Sexe))*100, digits = 2)), caption = "relation entre credit et sexe")
+kable(addmargins(round(prop.table(xtabs(~accesouinon+Sexe))*100, digits = 2)), caption = "relation entre credit et sexe")
+kable(addmargins(round(prop.table(xtabs(~accesouinon+Secteur))*100, digits = 2)))
+kable(addmargins(round(prop.table(xtabs(~acces+Secteur))*100, digits = 2)))
+library(xtable)
+library(knitr)
+addmargins(round(prop.table(xtabs(~acces+Ventemensuelle))*100,digits = 2))
+R<-addmargins(round(prop.table(xtabs(~acces+Cahierrentreesortie))*100, digits = 2))
+kable(R)
+cdplot(acces,Cahierrentreesortie)
+V<-addmargins(round(prop.table(xtabs(~acces+Garantie))*100, digits = 2))
+V
+kable(V)
+cdplot(acces,Garantie)
+addmargins(round(prop.table(xtabs(~acces+Comptable))*100, digits = 2))
+library(ggplot2)
+m1<-glm(acces~Nbreannee, family = binomial())
+memoiredata$prob<-predict(m1,memoiredata, type = "response")
+ggplot(memoiredata, aes(Nbreannee,prob, color=factor(accesouinon), group=accesouinon))+
+  geom_path()
+cdplot(acces, Sexe)
+plot(acces~Education,data = memoiredata,xlab="Acces",ylab = "Education",main="Relation entre Acces et Education", col=c("gray", "blue"))
+plot(acces~Secteur,data = memoiredata,xlab="Acces",ylab = "Secteur",main="Relation entre Acces et Secteur", col=c("gray", "blue"))
+plot(acces~Age,data = memoiredata,xlab="Acces",ylab = "Age",main="Relation entre Acces et Age", col=c("gray","brown"))
+plot(acces~Sexe,data = memoiredata,xlab="Acces",ylab = "Sexe",main="Relation entre Acces et Sexe")
+plot(acces~Garantie,data = memoire,xlab="Acces",ylab = "Garantie",main="Relation entre Acces et Age", col=c("gray","blue"))
+ggplot(memoiredata, aes(Nbreannee,prob, color=factor(acces), group=acces))+
+  geom_line()
+require(Amelia)
+missmap(memoiredata)
+library(caret)
+newdata<-createDataPartition(memoiredata$acces, p=0.6, list = FALSE)
+newdata
+training<-memoiredata[newdata,]
+testing<-memoiredata[-newdata,]
+mod_fit<-glm(acces~Sexe+Age+Education+Nbreannee+Logement+Situationfamiliale.+Ventemensuelle+Secteur+Cahierrentreesortie+Revenumensuel, data = na.exclude(memoiredata),family=binomial(link = "logit"))
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+summary(mod_fit)
+library(knitr)
+kable(summary(mod_fit)$coef, digits = 2, caption = "regression logistique du modele en plein")
+mod_fit_un<-glm(acces~Sexe+Age+Education+MICROPME+Garantie+Logement+Demandecredit.1+Nbremployes+Secteur, data = na.exclude(memoiredata), family = binomial(link = "logit"))
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+summary(mod_fit_un)
+mod_fit_deux<-glm(acces~Age+Education+Nbremployes+Garantie+Ventemensuelle+Secteur, data = na.exclude(memoiredata), family = binomial(link = "logit"))
+summary(mod_fit_deux)
+mod_fit_trois<-glm(acces~Age+Nbreannee+Education+Secteur+Garantie+Cahierrentreesortie, data = na.exclude(memoiredata), family = binomial(link = "logit"))
+summary(mod_fit_trois)
+mod_fit_quatre<-glm(acces~Age+Garantie+Demandecredit.1+Personneacharge+Nbreannee+Cahierrentreesortie, data=na.exclude(memoiredata),family = binomial(link = "logit"))
+summary(mod_fit_quatre)
+Z<-exp(cbind(coef(mod_fit_quatre),confint(mod_fit_quatre)))
+library(knitr)
+kable(Z,caption="Le odd ratio quatre")# a interpreter les odds ratios
+library(knitr)
+kable(summary(mod_fit)$coef, digits = 4, caption = "les coefficients du modele general")
+kable(summary(mod_fit_un)$coef, digits = 4, caption = "les coefficients du premier modele reduit")
+kable(summary(mod_fit_deux)$coef, digits = 4, caption = "les coefficients du deuxieme modèle reduit")
+kable(summary(mod_fit_trois)$coef, digits = 4, caption = "les coefficients du troisieme modele")
+kable(summary(mod_fit_quatre)$coef, digits = 4, caption = "les coefficients du quatrieme modele" )
+drop1(mod_fit, test = "Chisq")
+drop1(mod_fit_un, test = "Chisq")
+drop1(mod_fit_deux, test = "Chisq")
+drop1(mod_fit_trois, test="Chisq")
+drop1(mod_fit_quatre, test = "Chisq")
+kable(anova(mod_fit_un,mod_fit_deux,mod_fit_trois,mod_fit_quatre, mod_fit, test = "Chisq"), caption = "Comparaison des modèles à partir de leur variance")
+anova(mod_fit_quatre,mod_fit_un,mod_fit_deux, mod_fit_trois, mod_fit, test = "Chisq")
+library(knitr)
+require(gmodels)
+step(mod_fit)
+step(mod_fit_deux)
+step(mod_fit_trois)
+step(mod_fit_quatre)
+#Prediction des probabilité du model général
+predicgeneral<-fitted(mod_fit)#newdata = testing)
+predicgeneral
+prediction_un<-fitted(mod_fit_un)
+prediction_un
+prediction_deux<-fitted(mod_fit_deux)
+prediction_deux
+prediction_trois<-fitted(mod_fit_trois)
+prediction_trois
+prediction_quatre<-fitted(mod_fit_quatre)
+prediction_quatre
+#Pearson Goodness-of-Fit Test
+library(pscl)
+pR2(mod_fit)
+pR2(mod_fit_un)
+pR2(mod_fit_deux)
+
+```
+
